@@ -25,6 +25,9 @@ class GameScene extends Phaser.Scene {
     gameState.moves = 0;
     gameState.startTime = Date.now();
 
+    // Move history for undo
+    this.moveHistory = [];
+
     // Calculate tile size based on grid
     this.calculateLayout();
 
@@ -224,7 +227,7 @@ class GameScene extends Phaser.Scene {
     });
 
     // Controls hint
-    this.add.text(width / 2, this.cameras.main.height - 20, 'Arrow Keys: Move | Space: Split | R: Reset | Esc: Menu', {
+    this.add.text(width / 2, this.cameras.main.height - 20, 'Arrow Keys: Move | Space: Split | Z: Undo | R: Reset | Esc: Menu', {
       fontFamily: 'Segoe UI, system-ui, sans-serif',
       fontSize: '12px',
       color: '#64748b'
@@ -260,6 +263,9 @@ class GameScene extends Phaser.Scene {
     // R for reset
     this.rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
+    // Z for undo
+    this.zKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+
     // Escape for menu
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
   }
@@ -281,6 +287,11 @@ class GameScene extends Phaser.Scene {
     // Check split
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.splitPebbles();
+    }
+
+    // Check undo
+    if (Phaser.Input.Keyboard.JustDown(this.zKey)) {
+      this.undoMove();
     }
 
     // Check reset
@@ -312,8 +323,74 @@ class GameScene extends Phaser.Scene {
     return true;
   }
 
+  saveMoveState() {
+    // Save current state for undo
+    const state = {
+      pebblePositions: this.pebbles.map(p => ({ id: p.id, x: p.gridX, y: p.gridY })),
+      pebbleCount: this.pebbles.length,
+      moves: this.game.gameState.moves
+    };
+    this.moveHistory.push(state);
+
+    // Limit history size
+    if (this.moveHistory.length > 50) {
+      this.moveHistory.shift();
+    }
+  }
+
+  undoMove() {
+    if (this.moveHistory.length === 0 || this.isProcessingMove) return;
+
+    const state = this.moveHistory.pop();
+
+    // Remove pebbles that were created after this state
+    while (this.pebbles.length > state.pebbleCount) {
+      const pebble = this.pebbles.pop();
+      pebble.destroy();
+    }
+
+    // Restore pebble positions
+    state.pebblePositions.forEach(savedPos => {
+      const pebble = this.pebbles.find(p => p.id === savedPos.id);
+      if (pebble) {
+        pebble.gridX = savedPos.x;
+        pebble.gridY = savedPos.y;
+
+        const tileSize = this.tileSize;
+        const targetX = savedPos.x * tileSize + tileSize / 2 + this.gridOffsetX;
+        const targetY = savedPos.y * tileSize + tileSize / 2 + this.gridOffsetY;
+
+        // Animate to restored position
+        this.tweens.killTweensOf(pebble.container);
+        this.tweens.add({
+          targets: pebble.container,
+          x: targetX,
+          y: targetY,
+          duration: 100,
+          ease: 'Quad.easeOut',
+          onComplete: () => pebble.addIdleAnimation()
+        });
+      }
+    });
+
+    // Restore move count
+    this.game.gameState.moves = state.moves;
+    this.moveCountText.setText(`Moves: ${this.game.gameState.moves}`);
+    this.pebbleCountText.setText(`Pebbles: ${this.pebbles.length}/4`);
+
+    this.updateSwitches();
+
+    // Play undo sound
+    if (this.game.audioGenerator) {
+      this.game.audioGenerator.playBump();
+    }
+  }
+
   movePebbles(dx, dy) {
     this.isProcessingMove = true;
+
+    // Save state before moving (for undo)
+    this.saveMoveState();
 
     // Calculate target positions
     const moves = this.pebbles.map(pebble => {
@@ -378,6 +455,9 @@ class GameScene extends Phaser.Scene {
 
   splitPebbles() {
     if (this.pebbles.length >= 4) return;
+
+    // Save state before splitting (for undo)
+    this.saveMoveState();
 
     const newPebbles = [];
     const gridWidth = this.level.grid[0].length;

@@ -97,12 +97,18 @@ class Pebble {
     if (this.isMoving) return;
 
     this.isMoving = true;
-    this.gridX = newGridX;
-    this.gridY = newGridY;
 
     const tileSize = this.scene.tileSize;
+    const startX = this.container.x;
+    const startY = this.container.y;
     const targetX = newGridX * tileSize + tileSize / 2;
     const targetY = newGridY * tileSize + tileSize / 2;
+
+    // Create trail effect
+    this.createTrail(startX, startY, targetX, targetY);
+
+    this.gridX = newGridX;
+    this.gridY = newGridY;
 
     // Stop idle animation during move
     this.scene.tweens.killTweensOf(this.container);
@@ -146,6 +152,36 @@ class Pebble {
       yoyo: true,
       ease: 'Quad.easeOut'
     });
+
+    // Screen shake on bump
+    this.scene.cameras.main.shake(80, 0.003);
+  }
+
+  createTrail(fromX, fromY, toX, toY) {
+    // Create a trail particle effect
+    const trail = this.scene.add.graphics();
+    trail.fillStyle(0x4ade80, 0.4);
+
+    // Draw trail circles from start to end
+    const steps = 3;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      const x = fromX + (toX - fromX) * t;
+      const y = fromY + (toY - fromY) * t;
+      const size = this.scene.tileSize * 0.15 * (1 - t * 0.5);
+      trail.fillCircle(x, y, size);
+    }
+
+    trail.setDepth(5);
+
+    // Fade out trail
+    this.scene.tweens.add({
+      targets: trail,
+      alpha: 0,
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onComplete: () => trail.destroy()
+    });
   }
 
   split(newGridX, newGridY, newId) {
@@ -161,8 +197,62 @@ class Pebble {
       repeat: 2
     });
 
+    // Particle burst effect
+    this.createSplitParticles();
+
     // Create and return new pebble
     return new Pebble(this.scene, newGridX, newGridY, newId);
+  }
+
+  createSplitParticles() {
+    // Create particle burst when splitting
+    const particleCount = 8;
+    const colors = [0x4ade80, 0x22c55e, 0x86efac];
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 2;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const particle = this.scene.add.circle(
+        this.container.x,
+        this.container.y,
+        this.scene.tileSize * 0.1,
+        color,
+        0.8
+      );
+      particle.setDepth(15);
+
+      // Burst outward
+      const distance = this.scene.tileSize * 0.8;
+      this.scene.tweens.add({
+        targets: particle,
+        x: particle.x + Math.cos(angle) * distance,
+        y: particle.y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0.3,
+        duration: 400,
+        ease: 'Quad.easeOut',
+        onComplete: () => particle.destroy()
+      });
+    }
+
+    // Center glow
+    const glow = this.scene.add.circle(
+      this.container.x,
+      this.container.y,
+      this.scene.tileSize * 0.4,
+      0x4ade80,
+      0.5
+    );
+    glow.setDepth(14);
+
+    this.scene.tweens.add({
+      targets: glow,
+      scale: 1.5,
+      alpha: 0,
+      duration: 300,
+      ease: 'Quad.easeOut',
+      onComplete: () => glow.destroy()
+    });
   }
 
   playWinAnimation() {
