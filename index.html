@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pebbles Puzzles</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    #game-container {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+<script>
+// ==========================================
+// LEVEL DATA
+// ==========================================
+const LEVELS = {
+  "T-A": {
+    id: "T-A", name: "Awakening", world: 1, worldName: "Training", difficulty: 1,
+    tutorialId: "movement",
+    minPebbles: 1, parTime: 15,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 2, y: 3 }]
+  },
+  "T-B": {
+    id: "T-B", name: "Two Points", world: 1, worldName: "Training", difficulty: 1,
+    tutorialId: "switches",
+    minPebbles: 2, parTime: 10,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,2,0,0,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 2, y: 4 }, { x: 7, y: 4 }]
+  },
+  "T-C": {
+    id: "T-C", name: "Division", world: 1, worldName: "Training", difficulty: 1,
+    tutorialId: "split",
+    minPebbles: 2, parTime: 30,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,0,0,0,0,1],
+      [1,0,2,0,1,0,0,2,0,1],
+      [1,0,0,0,1,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 4, y: 5 }]
+  },
+  "T-D": {
+    id: "T-D", name: "Through Walls", world: 1, worldName: "Training", difficulty: 2,
+    minPebbles: 3, parTime: 45,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,1,0,0,0,0,0,1],
+      [1,2,0,1,0,0,0,0,2,1],
+      [1,0,0,1,0,0,0,0,0,1],
+      [1,0,0,0,0,0,1,0,0,1],
+      [1,0,0,0,0,0,1,0,0,1],
+      [1,0,0,0,0,0,1,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 4 }]
+  },
+  "T-E": {
+    id: "T-E", name: "Coordination", world: 1, worldName: "Training", difficulty: 2,
+    tutorialId: "simultaneous",
+    minPebbles: 4, parTime: 60,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,1,0,0,0,1],
+      [1,0,0,0,2,2,0,0,0,1],
+      [1,0,0,0,2,2,0,0,0,1],
+      [1,0,0,0,1,1,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 2, y: 4 }]
+  },
+  "1-1": {
+    id: "1-1", name: "Anu's Light", world: 2, worldName: "The Void", difficulty: 2,
+    minPebbles: 2, parTime: 45,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,2,0,0,0,0,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 2, y: 2 }]
+  },
+  "1-2": {
+    id: "1-2", name: "Split Path", world: 2, worldName: "The Void", difficulty: 2,
+    minPebbles: 2, parTime: 45,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,2,0,0,1,0,0,1,0,0,2,1],
+      [1,1,0,0,0,0,0,0,0,0,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 6, y: 7 }]
+  },
+  "1-3": {
+    id: "1-3", name: "Stagger", world: 2, worldName: "The Void", difficulty: 3,
+    minPebbles: 2, parTime: 60,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,1,0,0,0,0,0,0,1,0,1],
+      [1,0,1,0,0,0,0,0,0,1,0,1],
+      [1,2,1,0,0,1,1,0,0,1,2,1],
+      [1,0,0,0,0,1,1,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 6, y: 7 }]
+  },
+  "1-4": {
+    id: "1-4", name: "Corner Dance", world: 2, worldName: "The Void", difficulty: 3,
+    minPebbles: 4, parTime: 90,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,2,0,0,1,1,0,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,0,0,0,0,0,0,0,0,1,1],
+      [1,1,0,0,0,0,0,0,0,0,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,2,0,0,1,1,0,0,2,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 4 }]
+  },
+  "1-5": {
+    id: "1-5", name: "The Maze", world: 2, worldName: "The Void", difficulty: 4,
+    minPebbles: 3, parTime: 120,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,1,2,0,0,0,1,0,0,1],
+      [1,0,0,1,1,1,0,1,1,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,0,1,1,1,1,0,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,1,1,1,0,0,1,1,1,0,1],
+      [1,0,0,0,0,0,0,1,2,0,0,1],
+      [1,0,0,1,0,0,0,1,1,1,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 2, y: 3 }]
+  },
+  "1-6": {
+    id: "1-6", name: "Narrow Pass", world: 2, worldName: "The Void", difficulty: 3,
+    minPebbles: 4, parTime: 90,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,2,0,0,0,0,0,0,0,0,2,1],
+      [1,1,1,1,1,0,0,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,0,0,1,1,1,1,1],
+      [1,2,0,0,0,0,0,0,0,0,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 4 }]
+  },
+  "1-7": {
+    id: "1-7", name: "The Cross", world: 2, worldName: "The Void", difficulty: 3,
+    minPebbles: 4, parTime: 90,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,2,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,1,1,1,1,1,0,0,0,1],
+      [1,0,0,1,0,0,0,1,0,0,0,1],
+      [1,2,0,1,0,0,0,1,0,0,2,1],
+      [1,0,0,1,0,0,0,1,0,0,0,1],
+      [1,0,0,1,1,1,1,1,0,0,0,1],
+      [1,0,0,0,0,2,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 5 }]
+  },
+  "1-8": {
+    id: "1-8", name: "Spiral", world: 2, worldName: "The Void", difficulty: 4,
+    minPebbles: 3, parTime: 120,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,2,0,0,0,0,0,0,0,0,0,1],
+      [1,0,1,1,1,1,1,1,1,0,0,1],
+      [1,0,1,0,0,0,0,0,1,0,0,1],
+      [1,0,1,0,1,1,0,0,1,0,0,1],
+      [1,0,1,0,1,2,0,0,1,0,0,1],
+      [1,0,1,0,0,0,0,0,1,0,0,1],
+      [1,0,1,1,1,1,1,1,1,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 9, y: 1 }]
+  },
+  "1-9": {
+    id: "1-9", name: "Checkmate", world: 2, worldName: "The Void", difficulty: 4,
+    minPebbles: 3, parTime: 90,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,1,0,0,0,1,0,0,0,1],
+      [1,2,0,1,0,2,0,1,0,2,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,0,1,0,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,1,0,1,0,1,0,1,0,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 7 }]
+  },
+  "1-10": {
+    id: "1-10", name: "Promise", world: 2, worldName: "The Void", difficulty: 5,
+    minPebbles: 4, parTime: 120,
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,2,0,0,1,0,0,1,0,0,2,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,0,0,0,0,0,0,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1],
+      [1,2,0,0,1,0,0,1,0,0,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+    ],
+    startPos: [{ x: 5, y: 5 }]
+  }
+};
+
+const LEVEL_ORDER = [
+  "T-A", "T-B", "T-C", "T-D", "T-E",
+  "1-1", "1-2", "1-3", "1-4", "1-5", "1-6", "1-7", "1-8", "1-9", "1-10"
+];
+
+const WORLDS = {
+  1: { name: "Training", description: "Awakening in darkness", color: 0x1a1a2e },
+  2: { name: "The Void", description: "Anu's domain", color: 0x16213e }
+};
+
+// Story lore for training levels
+const LORE = {
+  "T-A": "You awaken in darkness. You are Pebble—a small, round being with no memory of how you came to be. The void stretches endlessly around you, but something glimmers in the distance...",
+  "T-B": "You are not alone. Another Pebble appears beside you, identical yet separate. Together, you sense the faint pulse of ancient switches—doorways that respond only to your presence.",
+  "T-C": "A strange wall blocks your path. But you feel a power stirring within—the ability to divide yourself, to become two where once there was one. The wall cannot stop what can pass through it.",
+  "T-D": "The walls here form a maze of barriers. Yet each wall is also an opportunity. Split wisely, and paths will open that seemed impossible before.",
+  "T-E": "Four switches pulse at the center of this chamber, clustered together like the four chambers of a heart. You must divide yourself to your limit—four Pebbles beating as one. This is the final test of Training."
+};
+
+const TUTORIALS = {
+  "movement": { title: "Movement", text: "Use ARROW KEYS or WASD to move.", showOnce: true },
+  "switches": { title: "Switches", text: "Stand on all switches at the same time to win.", showOnce: true },
+  "split": { title: "Splitting", text: "Press SPACE next to a wall to split through it.\nYou can have up to 4 Pebbles.", showOnce: true },
+  "simultaneous": { title: "Coordination", text: "All Pebbles move together. Plan carefully!", showOnce: true }
+};
+
+// ==========================================
+// GAME STATE
+// ==========================================
+const GameState = {
+  completedLevels: [],
+  levelStars: {}, // { levelId: { completion: true, efficiency: true, speed: true } }
+  unlockedWorlds: [1, 2],
+  seenTutorials: [],
+  moves: 0,
+  startTime: 0,
+  maxPebblesUsed: 0, // Track maximum pebbles during level
+
+  save() {
+    try {
+      localStorage.setItem('pebbles_save', JSON.stringify({
+        completedLevels: this.completedLevels,
+        levelStars: this.levelStars,
+        seenTutorials: this.seenTutorials
+      }));
+    } catch(e) {}
+  },
+
+  load() {
+    try {
+      const data = JSON.parse(localStorage.getItem('pebbles_save'));
+      if (data) {
+        this.completedLevels = data.completedLevels || [];
+        this.levelStars = data.levelStars || {};
+        this.seenTutorials = data.seenTutorials || [];
+      }
+    } catch(e) {}
+  },
+
+  completeLevel(id, pebbleCount, elapsedTime) {
+    const level = LEVELS[id];
+    if (!this.completedLevels.includes(id)) {
+      this.completedLevels.push(id);
+    }
+
+    // Calculate stars
+    const stars = {
+      completion: true, // Always earned on completion
+      efficiency: pebbleCount <= (level.minPebbles || 1),
+      speed: elapsedTime <= (level.parTime || 60)
+    };
+
+    // Merge with existing stars (keep best performance)
+    if (!this.levelStars[id]) {
+      this.levelStars[id] = stars;
+    } else {
+      this.levelStars[id].completion = true;
+      this.levelStars[id].efficiency = this.levelStars[id].efficiency || stars.efficiency;
+      this.levelStars[id].speed = this.levelStars[id].speed || stars.speed;
+    }
+
+    this.save();
+    return stars;
+  },
+
+  getStars(id) {
+    return this.levelStars[id] || { completion: false, efficiency: false, speed: false };
+  },
+
+  getStarCount(id) {
+    const stars = this.getStars(id);
+    return (stars.completion ? 1 : 0) + (stars.efficiency ? 1 : 0) + (stars.speed ? 1 : 0);
+  },
+
+  isLevelUnlocked(id) {
+    const idx = LEVEL_ORDER.indexOf(id);
+    if (idx <= 0) return true;
+    return this.completedLevels.includes(LEVEL_ORDER[idx - 1]);
+  }
+};
+
+// ==========================================
+// AUDIO SYSTEM
+// ==========================================
+const AudioSystem = {
+  ctx: null,
+  ambientNode: null,
+  ambientGain: null,
+  isPlaying: false,
+
+  init() {
+    if (this.ctx) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  },
+
+  // Typewriter click sound
+  playTypewriterClick() {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1800 + Math.random() * 400, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.02);
+
+    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.03);
+  },
+
+  // Happy victory sound - ascending arpeggio
+  playVictory() {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    const masterGain = this.ctx.createGain();
+    masterGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    masterGain.connect(this.ctx.destination);
+
+    notes.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+      const startTime = this.ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.5);
+    });
+
+    // Final sparkle
+    setTimeout(() => {
+      const sparkle = this.ctx.createOscillator();
+      const sparkleGain = this.ctx.createGain();
+      sparkle.type = 'sine';
+      sparkle.frequency.setValueAtTime(1568, this.ctx.currentTime); // G6
+      sparkleGain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+      sparkle.connect(sparkleGain);
+      sparkleGain.connect(this.ctx.destination);
+      sparkle.start();
+      sparkle.stop(this.ctx.currentTime + 0.3);
+    }, 500);
+  },
+
+  // Creepy ambient cave atmosphere with whooshing wind
+  startAmbient() {
+    if (!this.ctx) this.init();
+    if (this.isPlaying) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    this.ambientGain = this.ctx.createGain();
+    this.ambientGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    this.ambientGain.gain.linearRampToValueAtTime(0.25, this.ctx.currentTime + 3);
+    this.ambientGain.connect(this.ctx.destination);
+
+    // Create wind/whooshing noise
+    const bufferSize = 4 * this.ctx.sampleRate;
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    // Primary wind layer - slow whooshing
+    const wind1 = this.ctx.createBufferSource();
+    wind1.buffer = noiseBuffer;
+    wind1.loop = true;
+    const wind1Filter = this.ctx.createBiquadFilter();
+    wind1Filter.type = 'bandpass';
+    wind1Filter.frequency.setValueAtTime(400, this.ctx.currentTime);
+    wind1Filter.Q.setValueAtTime(0.5, this.ctx.currentTime);
+    const wind1Gain = this.ctx.createGain();
+    wind1Gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    // Slow modulation for whooshing effect
+    const lfo1 = this.ctx.createOscillator();
+    lfo1.type = 'sine';
+    lfo1.frequency.setValueAtTime(0.15, this.ctx.currentTime);
+    const lfo1Gain = this.ctx.createGain();
+    lfo1Gain.gain.setValueAtTime(150, this.ctx.currentTime);
+    lfo1.connect(lfo1Gain);
+    lfo1Gain.connect(wind1Filter.frequency);
+    lfo1.start();
+    wind1.connect(wind1Filter);
+    wind1Filter.connect(wind1Gain);
+    wind1Gain.connect(this.ambientGain);
+    wind1.start();
+
+    // Secondary wind layer - higher, breathier
+    const wind2 = this.ctx.createBufferSource();
+    wind2.buffer = noiseBuffer;
+    wind2.loop = true;
+    const wind2Filter = this.ctx.createBiquadFilter();
+    wind2Filter.type = 'bandpass';
+    wind2Filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+    wind2Filter.Q.setValueAtTime(1, this.ctx.currentTime);
+    const wind2Gain = this.ctx.createGain();
+    wind2Gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+    // Different modulation speed
+    const lfo2 = this.ctx.createOscillator();
+    lfo2.type = 'sine';
+    lfo2.frequency.setValueAtTime(0.08, this.ctx.currentTime);
+    const lfo2Gain = this.ctx.createGain();
+    lfo2Gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+    lfo2.connect(lfo2Gain);
+    lfo2Gain.connect(wind2Gain.gain);
+    lfo2.start();
+    wind2.connect(wind2Filter);
+    wind2Filter.connect(wind2Gain);
+    wind2Gain.connect(this.ambientGain);
+    wind2.start();
+
+    // Deep rumble - very low frequency for cave depth feeling
+    const rumble = this.ctx.createBufferSource();
+    rumble.buffer = noiseBuffer;
+    rumble.loop = true;
+    const rumbleFilter = this.ctx.createBiquadFilter();
+    rumbleFilter.type = 'lowpass';
+    rumbleFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
+    const rumbleGain = this.ctx.createGain();
+    rumbleGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    rumble.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(this.ambientGain);
+    rumble.start();
+
+    // Occasional distant echo/resonance
+    const echo = this.ctx.createOscillator();
+    echo.type = 'sine';
+    echo.frequency.setValueAtTime(110, this.ctx.currentTime);
+    const echoGain = this.ctx.createGain();
+    echoGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+    // Very slow swell
+    const echoLfo = this.ctx.createOscillator();
+    echoLfo.type = 'sine';
+    echoLfo.frequency.setValueAtTime(0.03, this.ctx.currentTime);
+    const echoLfoGain = this.ctx.createGain();
+    echoLfoGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+    echoLfo.connect(echoLfoGain);
+    echoLfoGain.connect(echoGain.gain);
+    echoLfo.start();
+    echo.connect(echoGain);
+    echoGain.connect(this.ambientGain);
+    echo.start();
+
+    this.ambientNodes = [wind1, wind2, rumble, echo, lfo1, lfo2, echoLfo];
+    this.isPlaying = true;
+  },
+
+  stopAmbient() {
+    if (!this.isPlaying || !this.ambientGain) return;
+
+    this.ambientGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1);
+
+    setTimeout(() => {
+      if (this.ambientNodes) {
+        this.ambientNodes.forEach(node => {
+          try { node.stop(); } catch(e) {}
+        });
+      }
+      this.isPlaying = false;
+    }, 1100);
+  }
+};
+
+// ==========================================
+// PEBBLE CLASS
+// ==========================================
+class Pebble {
+  constructor(scene, gridX, gridY, id) {
+    this.scene = scene;
+    this.gridX = gridX;
+    this.gridY = gridY;
+    this.id = id;
+    this.isMoving = false;
+    this.createGraphics();
+  }
+
+  createGraphics() {
+    const ts = this.scene.tileSize;
+    const x = this.scene.gridOffsetX + this.gridX * ts + ts / 2;
+    const y = this.scene.gridOffsetY + this.gridY * ts + ts / 2;
+
+    this.container = this.scene.add.container(x, y);
+
+    // Shadow
+    this.container.add(this.scene.add.ellipse(2, 4, ts * 0.7, ts * 0.3, 0x000000, 0.3));
+
+    // Body
+    const r = ts * 0.35;
+    const body = this.scene.add.graphics();
+    body.fillStyle(0x16a34a, 1);
+    body.fillCircle(0, 2, r);
+    body.fillStyle(0x22c55e, 1);
+    body.fillCircle(0, 0, r);
+    body.fillStyle(0x4ade80, 0.6);
+    body.fillCircle(-r * 0.3, -r * 0.3, r * 0.4);
+    this.container.add(body);
+
+    // Eyes
+    const eyeOff = r * 0.3;
+    const eyeSize = r * 0.25;
+    this.container.add(this.scene.add.circle(-eyeOff, -eyeOff * 0.5, eyeSize, 0x1a1a2e));
+    this.container.add(this.scene.add.circle(eyeOff, -eyeOff * 0.5, eyeSize, 0x1a1a2e));
+    this.container.add(this.scene.add.circle(-eyeOff + 2, -eyeOff * 0.5 - 2, eyeSize * 0.3, 0xffffff));
+    this.container.add(this.scene.add.circle(eyeOff + 2, -eyeOff * 0.5 - 2, eyeSize * 0.3, 0xffffff));
+
+    this.container.setDepth(10);
+
+    // Idle animation
+    this.scene.tweens.add({
+      targets: this.container, y: y - 2, duration: 1000 + Math.random() * 500,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+    });
+  }
+
+  moveTo(newX, newY, onComplete) {
+    if (this.isMoving) return;
+    this.isMoving = true;
+    this.gridX = newX;
+    this.gridY = newY;
+
+    const ts = this.scene.tileSize;
+    const targetX = this.scene.gridOffsetX + newX * ts + ts / 2;
+    const targetY = this.scene.gridOffsetY + newY * ts + ts / 2;
+
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container, x: targetX, y: targetY, duration: 100, ease: 'Quad.easeOut',
+      onComplete: () => {
+        this.isMoving = false;
+        this.scene.tweens.add({
+          targets: this.container, y: targetY - 2, duration: 1000,
+          yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
+        if (onComplete) onComplete();
+      }
+    });
+  }
+
+  bump(dx, dy) {
+    const ox = this.container.x, oy = this.container.y;
+    this.scene.tweens.add({
+      targets: this.container, x: ox + dx * 3, y: oy + dy * 3,
+      duration: 50, yoyo: true, ease: 'Quad.easeOut'
+    });
+  }
+
+  playWin() {
+    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.add({
+      targets: this.container, y: this.container.y - 20, duration: 200,
+      yoyo: true, repeat: 2, ease: 'Quad.easeOut'
+    });
+  }
+
+  destroy() {
+    this.scene.tweens.killTweensOf(this.container);
+    this.container.destroy();
+  }
+}
+
+// ==========================================
+// MENU SCENE
+// ==========================================
+class MenuScene extends Phaser.Scene {
+  constructor() { super({ key: 'MenuScene' }); }
+
+  create() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+    this.add.rectangle(0, 0, w, h, 0x1a1a2e).setOrigin(0);
+
+    this.add.text(w/2, h*0.3, 'PEBBLES', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '64px', fontStyle: 'bold',
+      color: '#4ade80', stroke: '#166534', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    this.add.text(w/2, h*0.42, 'PUZZLES', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '28px', color: '#94a3b8'
+    }).setOrigin(0.5);
+
+    this.createButton(w/2, h*0.6, 'Play', () => this.scene.start('LevelSelectScene'));
+
+    this.add.text(w/2, h*0.85, 'Arrow Keys: Move | Space: Split | R: Reset', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '14px', color: '#64748b'
+    }).setOrigin(0.5);
+  }
+
+  createButton(x, y, text, cb) {
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1e293b, 1);
+    bg.fillRoundedRect(x - 100, y - 25, 200, 50, 12);
+    bg.lineStyle(2, 0x4ade80, 1);
+    bg.strokeRoundedRect(x - 100, y - 25, 200, 50, 12);
+
+    const txt = this.add.text(x, y, text, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '20px', color: '#e2e8f0'
+    }).setOrigin(0.5);
+
+    const hit = this.add.rectangle(x, y, 200, 50, 0x000000, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => { txt.setColor('#4ade80'); });
+    hit.on('pointerout', () => { txt.setColor('#e2e8f0'); });
+    hit.on('pointerdown', cb);
+  }
+}
+
+// ==========================================
+// LEVEL SELECT SCENE
+// ==========================================
+class LevelSelectScene extends Phaser.Scene {
+  constructor() { super({ key: 'LevelSelectScene' }); }
+
+  create() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+    this.add.rectangle(0, 0, w, h, 0x1a1a2e).setOrigin(0);
+
+    this.add.text(w/2, 30, 'Select Level', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#4ade80'
+    }).setOrigin(0.5);
+
+    // Back button
+    const back = this.add.text(20, 20, '← Menu', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '16px', color: '#94a3b8'
+    }).setInteractive({ useHandCursor: true });
+    back.on('pointerover', () => back.setColor('#4ade80'));
+    back.on('pointerout', () => back.setColor('#94a3b8'));
+    back.on('pointerdown', () => this.scene.start('MenuScene'));
+
+    // Level cards
+    const cols = 5, cardW = 110, cardH = 90, gap = 15;
+    const startX = (w - (cols * (cardW + gap) - gap)) / 2;
+    const startY = 100;
+
+    LEVEL_ORDER.forEach((id, i) => {
+      const level = LEVELS[id];
+      const row = Math.floor(i / cols), col = i % cols;
+      const x = startX + col * (cardW + gap), y = startY + row * (cardH + gap);
+      this.createCard(x, y, cardW, cardH, level);
+    });
+  }
+
+  createCard(x, y, w, h, level) {
+    const done = GameState.completedLevels.includes(level.id);
+    const unlocked = GameState.isLevelUnlocked(level.id);
+    const stars = GameState.getStars(level.id);
+    const starCount = GameState.getStarCount(level.id);
+
+    const card = this.add.graphics();
+    card.fillStyle(done ? 0x166534 : (unlocked ? 0x1e293b : 0x0f172a), 1);
+    card.fillRoundedRect(x, y, w, h, 10);
+    card.lineStyle(2, done ? 0x4ade80 : 0x475569, 1);
+    card.strokeRoundedRect(x, y, w, h, 10);
+
+    const num = level.id.split('-')[1];
+    this.add.text(x + w/2, y + 22, num, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '24px', fontStyle: 'bold',
+      color: unlocked ? '#e2e8f0' : '#475569'
+    }).setOrigin(0.5);
+
+    this.add.text(x + w/2, y + 48, level.name, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '11px',
+      color: unlocked ? '#94a3b8' : '#475569'
+    }).setOrigin(0.5);
+
+    // Show earned stars (3-star system) instead of difficulty
+    if (done) {
+      const starDisplay = (stars.completion ? '★' : '☆') + (stars.efficiency ? '★' : '☆') + (stars.speed ? '★' : '☆');
+      this.add.text(x + w/2, y + 68, starDisplay, {
+        fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '12px',
+        color: '#fbbf24'
+      }).setOrigin(0.5);
+    } else if (unlocked) {
+      // Show empty stars for unlocked but incomplete levels
+      this.add.text(x + w/2, y + 68, '☆☆☆', {
+        fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '12px',
+        color: '#475569'
+      }).setOrigin(0.5);
+    }
+
+    if (!unlocked) {
+      this.add.text(x + w/2, y + h/2, '🔒', { fontSize: '20px' }).setOrigin(0.5);
+    }
+
+    if (unlocked) {
+      const hit = this.add.rectangle(x + w/2, y + h/2, w, h, 0, 0).setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => {
+        card.clear();
+        card.fillStyle(done ? 0x22c55e : 0x334155, 1);
+        card.fillRoundedRect(x, y, w, h, 10);
+        card.lineStyle(2, 0x4ade80, 1);
+        card.strokeRoundedRect(x, y, w, h, 10);
+      });
+      hit.on('pointerout', () => {
+        card.clear();
+        card.fillStyle(done ? 0x166534 : 0x1e293b, 1);
+        card.fillRoundedRect(x, y, w, h, 10);
+        card.lineStyle(2, done ? 0x4ade80 : 0x475569, 1);
+        card.strokeRoundedRect(x, y, w, h, 10);
+      });
+      hit.on('pointerdown', () => this.scene.start('GameScene', { levelId: level.id }));
+    }
+  }
+}
+
+// ==========================================
+// GAME SCENE
+// ==========================================
+class GameScene extends Phaser.Scene {
+  constructor() { super({ key: 'GameScene' }); }
+
+  init(data) { this.levelId = data.levelId || '1-1'; }
+
+  create() {
+    this.level = LEVELS[this.levelId];
+    if (!this.level) { this.scene.start('LevelSelectScene'); return; }
+
+    GameState.moves = 0;
+    GameState.startTime = Date.now();
+    GameState.maxPebblesUsed = this.level.startPos.length; // Initialize with starting pebble count
+
+    this.calculateLayout();
+    this.createBackground();
+    this.createGrid();
+    this.createPebbles();
+    this.createUI();
+    this.setupInput();
+
+    this.hasWon = false;
+    this.isMoving = false;
+
+    // Start ambient cave sound
+    AudioSystem.startAmbient();
+
+    // Tutorial
+    if (this.level.tutorialId && !GameState.seenTutorials.includes(this.level.tutorialId)) {
+      this.showTutorial(this.level.tutorialId);
+      GameState.seenTutorials.push(this.level.tutorialId);
+      GameState.save();
+    }
+  }
+
+  calculateLayout() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+    const gw = this.level.grid[0].length, gh = this.level.grid.length;
+    const maxTW = (w - 80) / gw, maxTH = (h - 120) / gh;
+    this.tileSize = Math.min(maxTW, maxTH, 50);
+    this.gridOffsetX = (w - gw * this.tileSize) / 2;
+    this.gridOffsetY = (h - gh * this.tileSize) / 2 + 20;
+  }
+
+  createBackground() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+    const world = WORLDS[this.level.world];
+    this.add.rectangle(0, 0, w, h, world ? world.color : 0x1a1a2e).setOrigin(0);
+  }
+
+  createGrid() {
+    this.switches = [];
+    const grid = this.level.grid, ts = this.tileSize;
+
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        const sx = this.gridOffsetX + x * ts, sy = this.gridOffsetY + y * ts;
+        const tile = grid[y][x];
+
+        if (tile === 1) {
+          const wall = this.add.graphics();
+          wall.fillStyle(0x475569, 1);
+          wall.fillRoundedRect(sx + 1, sy + 1, ts - 2, ts - 2, 6);
+          wall.fillStyle(0x64748b, 0.5);
+          wall.fillRoundedRect(sx + 3, sy + 3, ts - 8, 4, 2);
+        } else if (tile === 2) {
+          const cx = sx + ts/2, cy = sy + ts/2, r = ts * 0.3;
+          const base = this.add.graphics();
+          base.fillStyle(0x334155, 1);
+          base.fillCircle(cx, cy, r + 4);
+          const ind = this.add.graphics();
+          ind.fillStyle(0x64748b, 1);
+          ind.fillCircle(cx, cy, r);
+          this.switches.push({ gridX: x, gridY: y, ind, cx, cy, r, isActive: false });
+        } else {
+          const floor = this.add.graphics();
+          floor.fillStyle(0xffffff, 0.02);
+          floor.fillRoundedRect(sx + 2, sy + 2, ts - 4, ts - 4, 4);
+        }
+      }
+    }
+  }
+
+  createPebbles() {
+    this.pebbles = [];
+    this.nextId = 0;
+    this.level.startPos.forEach(pos => {
+      this.pebbles.push(new Pebble(this, pos.x, pos.y, this.nextId++));
+    });
+    this.updateSwitches();
+  }
+
+  createUI() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+
+    this.add.text(w/2, 12, `${this.level.worldName} - ${this.level.name}`, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#e2e8f0'
+    }).setOrigin(0.5);
+
+    // Instructions moved to top, under level name
+    this.add.text(w/2, 34, 'Arrows: Move  |  Space: Split  |  R: Reset  |  Esc: Back', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '12px', color: '#64748b'
+    }).setOrigin(0.5);
+
+    this.pebbleText = this.add.text(15, 12, `Pebbles: ${this.pebbles.length}/4`, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '13px', color: '#4ade80'
+    });
+
+    this.moveText = this.add.text(15, 30, 'Moves: 0', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '13px', color: '#94a3b8'
+    });
+
+    // Display lore text below the puzzle for early levels with typewriter effect
+    const loreText = LORE[this.levelId];
+    if (loreText) {
+      const gridBottom = this.gridOffsetY + this.level.grid.length * this.tileSize;
+      const loreDisplay = this.add.text(w/2, gridBottom + 12, '', {
+        fontFamily: 'Georgia, serif',
+        fontSize: '18px',
+        color: '#d4c5a9',
+        fontStyle: 'italic',
+        align: 'center',
+        wordWrap: { width: w - 60 },
+        lineSpacing: 6
+      }).setOrigin(0.5, 0);
+
+      // Typewriter effect - sound plays first, then character appears
+      let charIndex = 0;
+      const typeSpeed = 30; // ms per character
+
+      // Play first click immediately
+      AudioSystem.playTypewriterClick();
+
+      this.typewriterTimer = this.time.addEvent({
+        delay: typeSpeed,
+        callback: () => {
+          // Show the character
+          loreDisplay.setText(loreText.substring(0, charIndex + 1));
+          charIndex++;
+          // Play sound for next character (if there is one)
+          if (charIndex < loreText.length) {
+            AudioSystem.playTypewriterClick();
+          }
+        },
+        repeat: loreText.length - 1
+      });
+    }
+
+    const close = this.add.text(w - 15, 12, '✕', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '22px', color: '#64748b'
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    close.on('pointerover', () => close.setColor('#ef4444'));
+    close.on('pointerout', () => close.setColor('#64748b'));
+    close.on('pointerdown', () => {
+      AudioSystem.stopAmbient();
+      this.scene.start('LevelSelectScene');
+    });
+  }
+
+  setupInput() {
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd = this.input.keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D' });
+    this.spaceKey = this.input.keyboard.addKey('SPACE');
+    this.rKey = this.input.keyboard.addKey('R');
+    this.escKey = this.input.keyboard.addKey('ESC');
+  }
+
+  update() {
+    if (this.hasWon || this.isMoving) return;
+
+    if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.wasd.up)) {
+      this.movePebbles(0, -1);
+    } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.wasd.down)) {
+      this.movePebbles(0, 1);
+    } else if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.left)) {
+      this.movePebbles(-1, 0);
+    } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.right)) {
+      this.movePebbles(1, 0);
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.splitPebbles();
+    if (Phaser.Input.Keyboard.JustDown(this.rKey)) this.scene.restart({ levelId: this.levelId });
+    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+      AudioSystem.stopAmbient();
+      this.scene.start('LevelSelectScene');
+    }
+  }
+
+  canMoveTo(x, y, excludeId = null) {
+    if (y < 0 || y >= this.level.grid.length) return false;
+    if (x < 0 || x >= this.level.grid[0].length) return false;
+    if (this.level.grid[y][x] === 1) return false;
+    return !this.pebbles.some(p => p.id !== excludeId && p.gridX === x && p.gridY === y);
+  }
+
+  movePebbles(dx, dy) {
+    this.isMoving = true;
+
+    // First pass: check if each pebble can move (ignoring other pebbles for now, just walls)
+    const moves = this.pebbles.map(p => {
+      const nx = p.gridX + dx, ny = p.gridY + dy;
+      // Check bounds and walls only
+      const blocked = ny < 0 || ny >= this.level.grid.length ||
+                      nx < 0 || nx >= this.level.grid[0].length ||
+                      this.level.grid[ny][nx] === 1;
+      return { p, ox: p.gridX, oy: p.gridY, nx, ny, can: !blocked };
+    });
+
+    // Second pass: resolve all collisions iteratively
+    // Keep checking until no changes occur
+    let changed = true;
+    let iterations = 0;
+    const maxIterations = 10; // Safety limit
+
+    while (changed && iterations < maxIterations) {
+      changed = false;
+      iterations++;
+
+      moves.forEach(m => {
+        if (!m.can) return;
+
+        // Check if another pebble occupies the target space AND is not moving away
+        const blocker = moves.find(o => o !== m && o.ox === m.nx && o.oy === m.ny);
+        if (blocker && !blocker.can) {
+          // The blocker can't move, so we can't move into its space
+          m.can = false;
+          changed = true;
+        }
+      });
+    }
+
+    // Third pass: check for two pebbles trying to move to the same space
+    // Use a Set to track claimed destinations
+    const claimed = new Set();
+    moves.forEach(m => {
+      if (!m.can) return;
+      const key = `${m.nx},${m.ny}`;
+      if (claimed.has(key)) {
+        // Another pebble already claimed this destination
+        m.can = false;
+      } else {
+        claimed.add(key);
+      }
+    });
+
+    let anyMoved = false, done = 0;
+    const total = this.pebbles.length;
+
+    moves.forEach(m => {
+      if (m.can) {
+        anyMoved = true;
+        m.p.moveTo(m.nx, m.ny, () => {
+          done++;
+          if (done === total) {
+            this.isMoving = false;
+            this.updateSwitches();
+            this.checkWin();
+          }
+        });
+      } else {
+        m.p.bump(dx, dy);
+        done++;
+        if (done === total) this.isMoving = false;
+      }
+    });
+
+    if (anyMoved) {
+      GameState.moves++;
+      this.moveText.setText(`Moves: ${GameState.moves}`);
+    }
+  }
+
+  splitPebbles() {
+    if (this.pebbles.length >= 4) return;
+
+    const gw = this.level.grid[0].length, gh = this.level.grid.length;
+    const newPebbles = [];
+
+    this.pebbles.forEach(p => {
+      [{ dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }].forEach(({ dx, dy }) => {
+        const wx = p.gridX + dx, wy = p.gridY + dy;
+        const bx = p.gridX + dx * 2, by = p.gridY + dy * 2;
+
+        if (wx >= 0 && wx < gw && wy >= 0 && wy < gh && this.level.grid[wy][wx] === 1 &&
+            bx >= 0 && bx < gw && by >= 0 && by < gh && this.level.grid[by][bx] !== 1) {
+          const occupied = [...this.pebbles, ...newPebbles].some(o => o.gridX === bx && o.gridY === by);
+          if (!occupied && this.pebbles.length + newPebbles.length < 4) {
+            newPebbles.push(new Pebble(this, bx, by, this.nextId++));
+          }
+        }
+      });
+    });
+
+    if (newPebbles.length > 0) {
+      this.pebbles.push(...newPebbles);
+      this.pebbleText.setText(`Pebbles: ${this.pebbles.length}/4`);
+      // Track max pebbles used for efficiency star
+      GameState.maxPebblesUsed = Math.max(GameState.maxPebblesUsed, this.pebbles.length);
+      this.updateSwitches();
+    }
+  }
+
+  updateSwitches() {
+    this.switches.forEach(s => {
+      s.isActive = this.pebbles.some(p => p.gridX === s.gridX && p.gridY === s.gridY);
+      s.ind.clear();
+      if (s.isActive) {
+        s.ind.fillStyle(0xfbbf24, 0.3);
+        s.ind.fillCircle(s.cx, s.cy, s.r + 5);
+        s.ind.fillStyle(0xfbbf24, 1);
+        s.ind.fillCircle(s.cx, s.cy, s.r);
+      } else {
+        s.ind.fillStyle(0x64748b, 1);
+        s.ind.fillCircle(s.cx, s.cy, s.r);
+      }
+    });
+  }
+
+  checkWin() {
+    if (this.switches.length === 0) return;
+    if (this.switches.every(s => s.isActive)) {
+      this.hasWon = true;
+      this.pebbles.forEach(p => p.playWin());
+
+      // Play victory sound
+      AudioSystem.playVictory();
+
+      // Calculate elapsed time and complete level with star calculation
+      const elapsed = Math.floor((Date.now() - GameState.startTime) / 1000);
+      this.earnedStars = GameState.completeLevel(this.levelId, GameState.maxPebblesUsed, elapsed);
+      this.elapsedTime = elapsed;
+
+      this.time.delayedCall(600, () => this.showWin());
+    }
+  }
+
+  showWin() {
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+    const level = this.level;
+
+    this.add.rectangle(0, 0, w, h, 0x000000, 0.7).setOrigin(0);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x1e293b, 1);
+    panel.fillRoundedRect(w/2 - 160, h/2 - 130, 320, 260, 16);
+    panel.lineStyle(3, 0x4ade80, 1);
+    panel.strokeRoundedRect(w/2 - 160, h/2 - 130, 320, 260, 16);
+
+    this.add.text(w/2, h/2 - 100, 'Level Complete!', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#4ade80'
+    }).setOrigin(0.5);
+
+    // 3-Star display with labels
+    const starY = h/2 - 55;
+    const starSpacing = 90;
+    const stars = this.earnedStars;
+
+    // Star 1: Completion (always earned)
+    this.createStarDisplay(w/2 - starSpacing, starY, stars.completion, 'Complete');
+
+    // Star 2: Efficiency (used minimum pebbles)
+    const effLabel = `≤${level.minPebbles} pebbles`;
+    this.createStarDisplay(w/2, starY, stars.efficiency, effLabel);
+
+    // Star 3: Speed (under par time)
+    const speedLabel = `≤${level.parTime}s`;
+    this.createStarDisplay(w/2 + starSpacing, starY, stars.speed, speedLabel);
+
+    // Stats
+    this.add.text(w/2, h/2 + 10, `Pebbles used: ${GameState.maxPebblesUsed}   |   Time: ${this.elapsedTime}s`, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '14px', color: '#94a3b8'
+    }).setOrigin(0.5);
+
+    this.add.text(w/2, h/2 + 35, `Moves: ${GameState.moves}`, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '14px', color: '#94a3b8'
+    }).setOrigin(0.5);
+
+    this.createWinBtn(w/2 - 65, h/2 + 85, 'Retry', () => this.scene.restart({ levelId: this.levelId }));
+
+    const idx = LEVEL_ORDER.indexOf(this.levelId);
+    const nextLabel = idx < LEVEL_ORDER.length - 1 ? 'Next' : 'Menu';
+    const nextAction = idx < LEVEL_ORDER.length - 1
+      ? () => this.scene.restart({ levelId: LEVEL_ORDER[idx + 1] })
+      : () => this.scene.start('LevelSelectScene');
+    this.createWinBtn(w/2 + 65, h/2 + 85, nextLabel, nextAction);
+  }
+
+  createStarDisplay(x, y, earned, label) {
+    // Star
+    const starSize = 28;
+    this.add.text(x, y, '★', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif',
+      fontSize: `${starSize}px`,
+      color: earned ? '#fbbf24' : '#475569'
+    }).setOrigin(0.5);
+
+    // Label below star
+    this.add.text(x, y + 22, label, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif',
+      fontSize: '10px',
+      color: earned ? '#fbbf24' : '#64748b'
+    }).setOrigin(0.5);
+  }
+
+  createWinBtn(x, y, text, cb) {
+    const btn = this.add.graphics();
+    btn.fillStyle(0x334155, 1);
+    btn.fillRoundedRect(x - 50, y - 18, 100, 36, 8);
+    btn.lineStyle(2, 0x4ade80, 1);
+    btn.strokeRoundedRect(x - 50, y - 18, 100, 36, 8);
+
+    const txt = this.add.text(x, y, text, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '15px', color: '#e2e8f0'
+    }).setOrigin(0.5);
+
+    const hit = this.add.rectangle(x, y, 100, 36, 0, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => {
+      btn.clear();
+      btn.fillStyle(0x4ade80, 1);
+      btn.fillRoundedRect(x - 50, y - 18, 100, 36, 8);
+      txt.setColor('#1a1a2e');
+    });
+    hit.on('pointerout', () => {
+      btn.clear();
+      btn.fillStyle(0x334155, 1);
+      btn.fillRoundedRect(x - 50, y - 18, 100, 36, 8);
+      btn.lineStyle(2, 0x4ade80, 1);
+      btn.strokeRoundedRect(x - 50, y - 18, 100, 36, 8);
+      txt.setColor('#e2e8f0');
+    });
+    hit.on('pointerdown', cb);
+  }
+
+  showTutorial(id) {
+    const tut = TUTORIALS[id];
+    if (!tut) return;
+
+    const w = this.cameras.main.width, h = this.cameras.main.height;
+
+    const overlay = this.add.rectangle(0, 0, w, h, 0x000000, 0.5).setOrigin(0).setDepth(100);
+
+    const panel = this.add.graphics().setDepth(101);
+    panel.fillStyle(0x1e293b, 0.95);
+    panel.fillRoundedRect(w/2 - 180, h/2 - 55, 360, 110, 12);
+    panel.lineStyle(2, 0x4ade80, 1);
+    panel.strokeRoundedRect(w/2 - 180, h/2 - 55, 360, 110, 12);
+
+    const title = this.add.text(w/2, h/2 - 30, tut.title, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#4ade80'
+    }).setOrigin(0.5).setDepth(102);
+
+    const text = this.add.text(w/2, h/2 + 5, tut.text, {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '14px', color: '#e2e8f0', align: 'center'
+    }).setOrigin(0.5).setDepth(102);
+
+    const dismiss = this.add.text(w/2, h/2 + 40, 'Press any key to continue', {
+      fontFamily: 'Segoe UI, system-ui, sans-serif', fontSize: '11px', color: '#64748b'
+    }).setOrigin(0.5).setDepth(102);
+
+    const close = () => {
+      overlay.destroy(); panel.destroy(); title.destroy(); text.destroy(); dismiss.destroy();
+      this.input.keyboard.off('keydown', close);
+    };
+    this.input.keyboard.on('keydown', close);
+  }
+}
+
+// ==========================================
+// GAME CONFIG
+// ==========================================
+GameState.load();
+
+const config = {
+  type: Phaser.AUTO,
+  parent: 'game-container',
+  width: 800,
+  height: 600,
+  backgroundColor: '#1a1a2e',
+  scene: [MenuScene, LevelSelectScene, GameScene]
+};
+
+new Phaser.Game(config);
+</script>
+</body>
+</html>
